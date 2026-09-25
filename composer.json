@@ -1,0 +1,22 @@
+{
+    "name": "mago-assistant/magento2-rumvision",
+    "description": "Mago Assistant add-on: real-user performance data (Core Web Vitals) from RUMvision",
+    "type": "magento2-module",
+    "version": "0.1.0",
+    "require": {
+        "php": ">=8.2",
+        "mago-assistant/mago": "^2.0",
+        "magento/framework": ">=103.0.9",
+        "magento/module-config": "*",
+        "magento/module-store": "*",
+        "symfony/http-client": "^6.4 || ^7.0 || ^8.0"
+    },
+    "autoload": {
+        "files": [
+            "registration.php"
+        ],
+        "psr-4": {
+            "MagoAssistant\\Rumvision\\": ""
+        }
+    }
+}
