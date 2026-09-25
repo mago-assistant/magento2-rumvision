@@ -68,7 +68,7 @@ final class DomainResolverTest extends TestCase
 
     /**
      * @param string[] $apiDomains
-     * @param array<string, string> $configured website id ('' = default) => domain
+     * @param array<int|string, string> $configured website id ('' = default) => domain
      * @param array<int, array{int, string, string}> $stores website id, name, base URL
      */
     private function resolver(array $apiDomains, array $configured = [], array $stores = [], string $apiKey = 'key'): DomainResolver
