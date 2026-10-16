@@ -7,6 +7,7 @@ declare(strict_types=1);
 namespace MagoAssistant\Rumvision\Service\Skill;
 
 use Magento\Framework\AuthorizationInterface;
+use MagoAssistant\Mago\Api\Acl;
 use MagoAssistant\Mago\Api\Skill\ActionInterface;
 use MagoAssistant\Mago\Service\Skills\AbstractSkill;
 use MagoAssistant\Rumvision\Service\DomainResolver;
@@ -32,6 +33,17 @@ class Rumvision extends AbstractSkill
     public function getName(): string
     {
         return 'rumvision';
+    }
+
+    /**
+     * Reads only RUMvision's API, no Magento data; '' would be refused for everyone.
+     *
+     * @param array $input
+     * @return string
+     */
+    public function getMagentoAcl(array $input = []): string
+    {
+        return Acl::MAGO_PER_USER;
     }
 
     protected function getBaseDescription(): string
