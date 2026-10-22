@@ -12,7 +12,7 @@ use MagoAssistant\Rumvision\Service\DomainResolver;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-final class DomainsTest extends TestCase
+class DomainsTest extends TestCase
 {
     #[Test]
     public function listsTheKeysDomainsAfterAutomatic(): void

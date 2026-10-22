@@ -22,6 +22,9 @@ class ListAnnotations extends AbstractAction
             . 'templates), to relate changes in the numbers to what was released';
     }
 
+    /**
+     * @return array<string, array<string, mixed>>
+     */
     public function getParameterSchema(): array
     {
         return $this->fromParam() + $this->limitParam();

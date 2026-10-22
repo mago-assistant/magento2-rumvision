@@ -9,6 +9,18 @@ Want to use your own RUMvision account instead (richer MCP tools, no project key
 [magento2-mcp](https://github.com/mago-assistant/magento2-mcp): for admins who connect it there, this skill is hidden
 ("Replaces Skill = rumvision").
 
+## Compatibility
+
+| | |
+|---|---|
+| Magento Open Source | 2.4.8, 2.4.9 |
+| Mage-OS | 3.x |
+| PHP | 8.3, 8.4, 8.5 |
+| Mago Assistant | 1.x |
+| Storefront | Not affected: the module only adds a skill to the admin assistant, so Luma, Hyvä and headless stores all work |
+
+CI tests the currently supported Mage-OS release and Magento Open Source 2.4.8 and 2.4.9.
+
 ## Installation
 
 ```bash
@@ -19,15 +31,35 @@ bin/magento setup:upgrade
 
 ## Configuration
 
-**Stores > Configuration > Mago Assistant > RUMvision** (ACL: *Stores > Configuration > Mago Assistant RUMvision*)
+### Stores > Configuration > Mago Assistant > RUMvision > RUMvision
 
-| Field | |
-|---|---|
-| API Key | Create it in RUMvision under *API keys* with the role **All** (data, health checks and alerts need it), limited to this project's domain and preferably to the server's IP |
-| RUMvision Domain | Chosen from the domains the saved key can read; *Automatic* picks the one matching the store URL. RUMvision measures per tracking snippet, not per URL, so one domain usually covers every store view and language that loads its snippet, also on other hostnames. Only set it per website when that website has its own snippet |
-| Timeout | Seconds per request |
+Access to this section is its own ACL resource: *Stores > Settings > Configuration > Mago Assistant RUMvision*.
 
-The skill is only offered to the assistant when it is enabled and has an API key.
+| Setting | Default | Scope | What it does |
+|---------|---------|-------|--------------|
+| Enabled | No | Default | Turns the skill on. While off, the assistant does not see the skill and every call to it is refused, even with a saved key. |
+| API Key | (empty) | Default | The RUMvision API key, stored encrypted and kept out of `app:config:dump`. Create it in RUMvision under *API keys* with the role **All** (data, health checks and alerts need it), limited to this project's domain and preferably to the server's IP. The skill stays hidden until a key is saved. |
+| RUMvision Domain | Automatic | Default, Website | The RUMvision domain the assistant uses when the question does not name one. The list shows the domains the saved key can read. *Automatic* picks the domain matching each store view's base URL. RUMvision measures per tracking snippet, not per URL, so one domain usually covers every store view and language that loads its snippet, also on other hostnames: only set it per website when that website has its own snippet. |
+| Timeout (seconds) | 20 | Default | Maximum time per RUMvision request. The domain catalog (`describe_domain`) always gets at least 90 seconds, because RUMvision needs that long for an organisation-wide key. |
+
+The settings below *Enabled* only show once it is set to Yes.
+
+## Getting started
+
+1. In RUMvision, create an API key with the role **All** under *API keys*, limited to this project's domain.
+2. Go to **Stores > Configuration > Mago Assistant > RUMvision**, set **Enabled** to *Yes*, paste the key in **API Key**
+   and save.
+3. Reload the page. **RUMvision Domain** now lists the domains the key can read. Leave it on *Automatic* when the store's
+   base URL matches the RUMvision domain, otherwise pick the domain and save again.
+4. Give admins access to the skill `rumvision` on Mago's Skills page, like any other skill.
+5. Ask the assistant something like *"How did LCP on mobile develop over the last 4 weeks?"* or *"Which templates have
+   the worst INP?"*.
+
+![RUMvision configuration](docs/images/config-rumvision.png)
+<!-- TODO screenshot: Stores > Configuration > Mago Assistant > RUMvision, Enabled = Yes, domain list filled -->
+
+![The assistant answering a Core Web Vitals question](docs/images/assistant-rumvision.png)
+<!-- TODO screenshot: the Mago chat answering a question with get_metrics (total plus per-hostname rows) -->
 
 ## What the assistant can do
 
@@ -56,10 +88,41 @@ The skill `rumvision` is read-only and has these actions:
 - `filters.device-type` is always sent (both devices when no `device` is given): the API rejects the data endpoints
   without it.
 
+## Troubleshooting
+
+**The assistant does not offer the skill.** Check that *Enabled* is Yes and an API key is saved, and that the admin has
+the `rumvision` grant on Mago's Skills page. An admin who connected RUMvision through magento2-mcp with "Replaces Skill =
+rumvision" uses that connection instead.
+
+**The domain list only shows *Automatic*.** RUMvision rejected the key or did not answer. The reason is logged to
+`var/log/system.log` as *RUMvision domains could not be loaded: ...*. The list is cached for an hour, a failure for five
+minutes.
+
+**"Domain not found, or the API key has no access to it".** RUMvision answers 404 both for an unknown domain and for an
+endpoint the key's role does not cover. Give the key the **All** role.
+
+**"RUMvision rate limit reached".** The answer says when to try again when RUMvision sends a `Retry-After`.
+
+**`describe_domain` is slow or fails.** The first call per day fetches the full catalog, which can take close to a
+minute. A failed fetch is remembered for five minutes so the assistant does not keep waiting on it; a domain added to
+the key later is picked up on its first `describe_domain`.
+
 ## Tests
 
-From the Magento root:
+Unit tests run standalone from the module:
 
 ```bash
-vendor/bin/phpunit -c vendor/mago-assistant/magento2-rumvision/phpunit.xml.dist --bootstrap vendor/autoload.php
+composer install
+vendor/bin/phpunit
+vendor/bin/phpstan analyse
+vendor/bin/phpcs
 ```
+
+The integration tests in `Test/Integration` need Magento's integration test framework (`dev/tests/integration` in a
+Magento project); CI runs them through [check-extension](.github/workflows/check-extension.yaml).
+
+## More
+
+- [Changelog](CHANGELOG.md)
+- [Security policy](SECURITY.md)
+- License: [MIT](LICENSE)

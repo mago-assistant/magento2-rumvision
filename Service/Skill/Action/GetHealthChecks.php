@@ -30,6 +30,9 @@ class GetHealthChecks extends AbstractAction
             . 'since when) and the remediation steps';
     }
 
+    /**
+     * @return array<string, array<string, mixed>>
+     */
     public function getParameterSchema(): array
     {
         return $this->domainParam() + [

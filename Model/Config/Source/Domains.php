@@ -21,6 +21,9 @@ class Domains implements OptionSourceInterface
     ) {
     }
 
+    /**
+     * @return array<int, array{value: string, label: \Magento\Framework\Phrase|string}>
+     */
     public function toOptionArray(): array
     {
         $domains = $this->domainResolver->getApiDomains();
@@ -32,7 +35,7 @@ class Domains implements OptionSourceInterface
         // browser falls back to the first option and the next save silently clears the domain.
         $saved = array_diff($this->config->getConfiguredDomains(), $domains);
         foreach (array_unique([...$domains, ...$saved]) as $domain) {
-            $label = in_array($domain, $domains, true) ? $domain : $domain . ' ' . __('(saved)');
+            $label = in_array($domain, $domains, true) ? $domain : __('%1 (saved)', $domain);
             $options[] = ['value' => $domain, 'label' => $label];
         }
 

@@ -19,6 +19,9 @@ class GetAlerts extends AbstractAction
             . 'RUMvision\'s AI analysis when one was made';
     }
 
+    /**
+     * @return array<string, array<string, mixed>>
+     */
     public function getParameterSchema(): array
     {
         return $this->domainParam() + $this->fromParam() + [

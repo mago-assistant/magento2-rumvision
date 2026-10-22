@@ -6,13 +6,19 @@ declare(strict_types=1);
 
 namespace MagoAssistant\Rumvision\Test\Unit\Service\Skill;
 
+use Magento\Framework\App\Config\ScopeConfigInterface;
+use Magento\Framework\Encryption\EncryptorInterface;
+use Magento\Store\Model\StoreManagerInterface;
 use MagoAssistant\Rumvision\Model\Config;
 use MagoAssistant\Rumvision\Service\ApiClient;
+use MagoAssistant\Rumvision\Service\DomainCatalog;
 use MagoAssistant\Rumvision\Service\DomainResolver;
 use MagoAssistant\Rumvision\Service\RumvisionException;
+use MagoAssistant\Rumvision\Service\Skill\Action\DescribeDomain;
 use MagoAssistant\Rumvision\Service\Skill\Action\GetAlerts;
 use MagoAssistant\Rumvision\Service\Skill\Action\GetHealthChecks;
 use MagoAssistant\Rumvision\Service\Skill\Action\GetMetrics;
+use MagoAssistant\Rumvision\Service\Skill\Action\GetUxScores;
 use MagoAssistant\Rumvision\Service\Skill\Action\GetUxTimeline;
 use MagoAssistant\Rumvision\Service\Skill\Action\ListAnnotations;
 use MagoAssistant\Rumvision\Service\Skill\Action\ListDomains;
@@ -20,7 +26,7 @@ use MagoAssistant\Rumvision\Service\Skill\MetricsFormatter;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-final class ActionsTest extends TestCase
+class ActionsTest extends TestCase
 {
     /** @var array<int, array{string, string, array<string, mixed>}> */
     private array $calls = [];
@@ -47,10 +53,81 @@ final class ActionsTest extends TestCase
     #[Test]
     public function breaksMetricsDownByADimensionAndCleansAPastedUrl(): void
     {
-        $this->action(GetMetrics::class)->execute(['domain' => 'https://www.Other.nl/', 'dimension' => 'url-category'], 1);
+        $this->action(GetMetrics::class)->execute(
+            ['domain' => 'https://www.Other.nl/', 'dimension' => 'url-category'],
+            1
+        );
 
         self::assertSame('/data/distribution/www.other.nl/url-category', $this->calls[0][1]);
-        self::assertSame(['device-type' => ['mobile', 'desktop']], $this->calls[0][2]['filters'], 'the API requires device-type');
+        self::assertSame(
+            ['device-type' => ['mobile', 'desktop']],
+            $this->calls[0][2]['filters'],
+            'the API requires device-type'
+        );
+    }
+
+    #[Test]
+    public function refusesToCallTheApiWhileSwitchedOff(): void
+    {
+        $result = $this->action(GetMetrics::class, isEnabled: false)->execute(['domain' => 'shop.nl'], 1);
+
+        self::assertSame(
+            ['error' => 'RUMvision is switched off: enable it and enter an API key under Stores > Configuration > '
+                . 'Mago Assistant > RUMvision.'],
+            $result
+        );
+        self::assertSame([], $this->calls);
+    }
+
+    #[Test]
+    public function refusesADomainWithoutAHostname(): void
+    {
+        $result = $this->action(GetMetrics::class)->execute(['domain' => 'https://shop.nl:abc'], 1);
+
+        self::assertSame(['error' => '"https://shop.nl:abc" is not a domain; list_domains shows them.'], $result);
+        self::assertSame([], $this->calls);
+    }
+
+    #[Test]
+    public function queriesUxScoresPerDimensionForTheDevice(): void
+    {
+        $this->action(GetUxScores::class)->execute([
+            'dimension' => 'template-type',
+            'periods' => ['current' => ['from' => '2026-09-01', 'to' => '2026-09-24']],
+            'device' => 'desktop',
+        ], 1);
+
+        self::assertSame(['POST', '/data/ux-scores/shop.nl/template-type', [
+            'periods' => ['current' => ['from' => '2026-09-01', 'to' => '2026-09-24']],
+            'filters' => ['device-type' => ['desktop']],
+        ]], $this->calls[0]);
+    }
+
+    #[Test]
+    public function queriesTheUxTimelineForTheDomain(): void
+    {
+        $this->action(GetUxTimeline::class)->execute([
+            'domain' => 'shop.be',
+            'periods' => ['current' => ['from' => '2026-09-01', 'to' => '2026-09-24']],
+        ], 1);
+
+        self::assertSame(['POST', '/data/ux-scores-timeline/shop.be', [
+            'periods' => ['current' => ['from' => '2026-09-01', 'to' => '2026-09-24']],
+            'interval' => ['interval' => 1, 'unit' => 'd'],
+            'filters' => ['device-type' => ['mobile', 'desktop']],
+        ]], $this->calls[0]);
+    }
+
+    #[Test]
+    public function describesTheStoresDomainFromTheCatalog(): void
+    {
+        $catalog = $this->createStub(DomainCatalog::class);
+        $catalog->method('describe')->willReturnCallback(static fn (string $domain): array => ['domain' => $domain]);
+        $action = new DescribeDomain($this->createStub(ApiClient::class), $this->config(), $this->resolver(), $catalog);
+
+        $result = $action->execute([], 1);
+
+        self::assertSame(['domain' => 'shop.nl'], $result);
     }
 
     #[Test]
@@ -59,13 +136,19 @@ final class ActionsTest extends TestCase
         $action = $this->action(GetMetrics::class);
 
         $action->execute(['periods' => ['from' => '2026-09-01', 'to' => '2026-09-24']], 1);
-        $action->execute(['periods' => [['from' => '2026-09-10', 'to' => '2026-09-01'], ['from' => '2026-08-01', 'to' => '2026-08-09']]], 1);
+        $action->execute(['periods' => [
+            ['from' => '2026-09-10', 'to' => '2026-09-01'],
+            ['from' => '2026-08-01', 'to' => '2026-08-09'],
+        ]], 1);
         $action->execute(['periods' => '7d'], 1);
         $action->execute([], 1);
 
         self::assertSame(['current' => ['from' => '2026-09-01', 'to' => '2026-09-24']], $this->calls[0][2]['periods']);
         self::assertSame(
-            ['period_1' => ['from' => '2026-09-01', 'to' => '2026-09-10'], 'period_2' => ['from' => '2026-08-01', 'to' => '2026-08-09']],
+            [
+                'period_1' => ['from' => '2026-09-01', 'to' => '2026-09-10'],
+                'period_2' => ['from' => '2026-08-01', 'to' => '2026-08-09'],
+            ],
             $this->calls[1][2]['periods']
         );
         self::assertSame(gmdate('Y-m-d', strtotime('-7 days')), $this->calls[2][2]['periods']['current']['from']);
@@ -86,7 +169,10 @@ final class ActionsTest extends TestCase
     {
         $result = $this->action(GetMetrics::class, '', ['shop.nl' => [], 'shop.be' => []])->execute([], 1);
 
-        self::assertSame(['error' => 'This store uses several RUMvision domains (shop.nl, shop.be); pass "domain".'], $result);
+        self::assertSame(
+            ['error' => 'This store uses several RUMvision domains (shop.nl, shop.be); pass "domain".'],
+            $result
+        );
     }
 
     #[Test]
@@ -139,7 +225,7 @@ final class ActionsTest extends TestCase
         $api = $this->createStub(ApiClient::class);
         $api->method('get')->willThrowException(new RumvisionException('RUMvision rate limit reached.'));
 
-        $action = new GetHealthChecks($api, $this->createStub(Config::class), $this->resolver());
+        $action = new GetHealthChecks($api, $this->config(), $this->resolver());
 
         self::assertSame(['error' => 'RUMvision rate limit reached.'], $action->execute([], 1));
     }
@@ -155,11 +241,17 @@ final class ActionsTest extends TestCase
             'description' => 'Long check description the assistant does not need',
             'remediation_steps' => [['title' => 'Add fetchpriority', 'description' => 'Long text']],
             'todos' => [
-                ['title' => 'Open one', 'status' => 'open', 'filter_value' => 'pdp', 'device_type' => 'mobile', 'description' => str_repeat('x', 300)],
+                [
+                    'title' => 'Open one',
+                    'status' => 'open',
+                    'filter_value' => 'pdp',
+                    'device_type' => 'mobile',
+                    'description' => str_repeat('x', 300),
+                ],
                 ['title' => 'Fixed one', 'status' => 'fixed'],
             ],
         ]]]);
-        $action = new GetHealthChecks($api, $this->createStub(Config::class), $this->resolver());
+        $action = new GetHealthChecks($api, $this->config(), $this->resolver());
 
         $check = $action->execute([], 1)['health_checks'][0];
         $withHistory = $action->execute(['include_closed' => true], 1)['health_checks'][0];
@@ -178,17 +270,30 @@ final class ActionsTest extends TestCase
         $api = $this->createStub(ApiClient::class);
         $api->method('get')->willReturn(['data' => [
             ['title' => 'Old', 'impact_at' => '2026-01-01T10:00:00+00:00'],
-            ['title' => 'New', 'impact_at' => '2026-09-20T10:00:00+00:00', 'category' => ['name' => 'Caching'], 'url_categories' => [['name' => 'pdp']]],
+            [
+                'title' => 'New',
+                'impact_at' => '2026-09-20T10:00:00+00:00',
+                'category' => ['name' => 'Caching'],
+                'url_categories' => [['name' => 'pdp']],
+            ],
             ['title' => 'Middle', 'impact_at' => '2026-05-01T10:00:00+00:00'],
         ]]);
-        $action = new ListAnnotations($api, $this->createStub(Config::class), $this->resolver());
+        $action = new ListAnnotations($api, $this->config(), $this->resolver());
 
         $result = $action->execute(['limit' => 2], 1);
         $recent = $action->execute(['from' => '2026-04-01'], 1);
 
         self::assertSame(3, $result['total']);
         self::assertSame(['New', 'Middle'], array_column($result['annotations'], 'title'));
-        self::assertSame(['title' => 'New', 'impact_at' => '2026-09-20T10:00:00+00:00', 'category' => 'Caching', 'templates' => ['pdp']], $result['annotations'][0]);
+        self::assertSame(
+            [
+                'title' => 'New',
+                'impact_at' => '2026-09-20T10:00:00+00:00',
+                'category' => 'Caching',
+                'templates' => ['pdp'],
+            ],
+            $result['annotations'][0]
+        );
         self::assertSame(2, $recent['total']);
     }
 
@@ -198,8 +303,12 @@ final class ActionsTest extends TestCase
      * @param array<string, array<int, mixed>> $inUse
      * @return T
      */
-    private function action(string $class, string $default = 'shop.nl', array $inUse = ['shop.nl' => []]): object
-    {
+    private function action(
+        string $class,
+        string $default = 'shop.nl',
+        array $inUse = ['shop.nl' => []],
+        bool $isEnabled = true
+    ): object {
         $api = $this->createStub(ApiClient::class);
         $api->method('get')->willReturnCallback(function (string $path, array $query = []): array {
             $this->calls[] = ['GET', $path, $query];
@@ -210,12 +319,23 @@ final class ActionsTest extends TestCase
             return [];
         });
 
-        $args = [$api, $this->createStub(Config::class), $this->resolver($default, $inUse)];
+        $args = [$api, $this->config($isEnabled), $this->resolver($default, $inUse)];
         if ($class === GetMetrics::class) {
             $args[] = new MetricsFormatter();
         }
 
         return new $class(...$args);
+    }
+
+    private function config(bool $isEnabled = true): Config
+    {
+        $scopeConfig = $this->createStub(ScopeConfigInterface::class);
+        $scopeConfig->method('isSetFlag')->willReturn($isEnabled);
+        $scopeConfig->method('getValue')->willReturn('encrypted-key');
+        $encryptor = $this->createStub(EncryptorInterface::class);
+        $encryptor->method('decrypt')->willReturn('key');
+
+        return new Config($scopeConfig, $encryptor, $this->createStub(StoreManagerInterface::class));
     }
 
     /**

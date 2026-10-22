@@ -6,6 +6,8 @@ declare(strict_types=1);
 
 namespace MagoAssistant\Rumvision\Model;
 
+use Laminas\Uri\Exception\ExceptionInterface as UriException;
+use Laminas\Uri\Http;
 use Magento\Framework\App\Config\ScopeConfigInterface;
 use Magento\Framework\Encryption\EncryptorInterface;
 use Magento\Store\Model\ScopeInterface;
@@ -76,9 +78,13 @@ class Config
      */
     public function normalize(string $domain): string
     {
-        $domain = strtolower(trim($domain));
-        $host = parse_url(str_contains($domain, '://') ? $domain : 'https://' . $domain, PHP_URL_HOST);
+        $domain = trim($domain);
+        try {
+            $host = (string)(new Http(str_contains($domain, '://') ? $domain : 'https://' . $domain))->getHost();
+        } catch (UriException) {
+            return '';
+        }
 
-        return is_string($host) ? $host : '';
+        return Http::validateHost($host, Http::HOST_DNS_OR_IPVANY) ? strtolower($host) : '';
     }
 }

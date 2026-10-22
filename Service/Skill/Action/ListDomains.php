@@ -19,6 +19,9 @@ class ListDomains extends AbstractAction
             . 'each domain measures';
     }
 
+    /**
+     * @return array<string, array<string, mixed>>
+     */
     public function getParameterSchema(): array
     {
         return [];

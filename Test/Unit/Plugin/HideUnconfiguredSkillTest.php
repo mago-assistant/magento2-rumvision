@@ -13,7 +13,7 @@ use MagoAssistant\Rumvision\Plugin\HideUnconfiguredSkill;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-final class HideUnconfiguredSkillTest extends TestCase
+class HideUnconfiguredSkillTest extends TestCase
 {
     #[Test]
     public function offersTheSkillOnlyWhenConfigured(): void
@@ -21,8 +21,11 @@ final class HideUnconfiguredSkillTest extends TestCase
         $tool = $this->createStub(ToolInterface::class);
         $tools = ['rumvision' => $tool, 'sales_data' => $tool];
 
-        self::assertSame(['sales_data'], array_keys($this->plugin(false)->afterGetEnabledTools(new ToolRegistry(), $tools)));
-        self::assertSame(['rumvision', 'sales_data'], array_keys($this->plugin(true)->afterGetEnabledTools(new ToolRegistry(), $tools)));
+        $unconfigured = $this->plugin(false)->afterGetEnabledTools(new ToolRegistry(), $tools);
+        $configured = $this->plugin(true)->afterGetEnabledTools(new ToolRegistry(), $tools);
+
+        self::assertSame(['sales_data'], array_keys($unconfigured));
+        self::assertSame(['rumvision', 'sales_data'], array_keys($configured));
     }
 
     private function plugin(bool $configured): HideUnconfiguredSkill

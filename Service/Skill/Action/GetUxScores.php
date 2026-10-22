@@ -19,6 +19,9 @@ class GetUxScores extends AbstractAction
             . 'dimension value and filtered by device';
     }
 
+    /**
+     * @return array<string, array<string, mixed>>
+     */
     public function getParameterSchema(): array
     {
         return $this->domainParam() + $this->periodsParam() + $this->dimensionParam() + $this->deviceParam()

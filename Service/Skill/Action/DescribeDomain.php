@@ -33,6 +33,9 @@ class DescribeDomain extends AbstractAction
             . 'URL categories (templates) of a domain, and its default percentile';
     }
 
+    /**
+     * @return array<string, array<string, mixed>>
+     */
     public function getParameterSchema(): array
     {
         return $this->domainParam();

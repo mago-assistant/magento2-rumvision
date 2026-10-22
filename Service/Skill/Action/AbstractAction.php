@@ -36,8 +36,16 @@ abstract class AbstractAction implements ActionInterface
      */
     abstract protected function run(array $params): array;
 
+    /**
+     * @param array<string, mixed> $params
+     * @return array<string, mixed>
+     */
     public function execute(array $params, int $adminUserId): array
     {
+        if (!$this->config->isConfigured()) {
+            return ['error' => 'RUMvision is switched off: enable it and enter an API key under Stores > '
+                . 'Configuration > Mago Assistant > RUMvision.'];
+        }
         try {
             return $this->run($params);
         } catch (RumvisionException $e) {
@@ -174,11 +182,14 @@ abstract class AbstractAction implements ActionInterface
      */
     protected function domain(array $params): string
     {
-        $domain = strtolower(trim((string)($params['domain'] ?? '')));
+        $domain = trim((string)($params['domain'] ?? ''));
         if ($domain !== '') {
-            $host = parse_url(str_contains($domain, '://') ? $domain : 'https://' . $domain, PHP_URL_HOST);
+            $host = $this->config->normalize($domain);
+            if ($host === '') {
+                throw new RumvisionException(sprintf('"%s" is not a domain; list_domains shows them.', $domain));
+            }
 
-            return is_string($host) && $host !== '' ? $host : $domain;
+            return $host;
         }
 
         $default = $this->domainResolver->getDefaultDomain();

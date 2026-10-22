@@ -6,11 +6,14 @@ declare(strict_types=1);
 
 namespace MagoAssistant\Rumvision\Service;
 
+use Laminas\Uri\Exception\ExceptionInterface as UriException;
+use Laminas\Uri\Http;
 use Magento\Framework\App\CacheInterface;
 use Magento\Framework\Serialize\Serializer\Json;
 use Magento\Framework\UrlInterface;
 use Magento\Store\Model\StoreManagerInterface;
 use MagoAssistant\Rumvision\Model\Config;
+use Psr\Log\LoggerInterface;
 
 /**
  * RUMvision measures per tracking snippet, not per URL: one RUMvision domain usually collects several
@@ -31,7 +34,8 @@ class DomainResolver
         private readonly ApiClient $apiClient,
         private readonly StoreManagerInterface $storeManager,
         private readonly CacheInterface $cache,
-        private readonly Json $json
+        private readonly Json $json,
+        private readonly LoggerInterface $logger
     ) {
     }
 
@@ -47,8 +51,8 @@ class DomainResolver
             return [];
         }
         $cacheKey = 'mago_rumvision_domains_' . hash('sha256', $apiKey);
-        $cached = $this->cache->load($cacheKey);
-        if (is_string($cached) && $cached !== '') {
+        $cached = (string)$this->cache->load($cacheKey);
+        if ($cached !== '') {
             $domains = $this->json->unserialize($cached);
             return is_array($domains) ? array_map('strval', $domains) : [];
         }
@@ -59,7 +63,8 @@ class DomainResolver
                 (array)($this->apiClient->get('/domains')['data'] ?? [])
             )));
             $lifetime = self::CACHE_LIFETIME;
-        } catch (RumvisionException) {
+        } catch (RumvisionException $e) {
+            $this->logger->warning('RUMvision domains could not be loaded: ' . $e->getMessage());
             $domains = [];
             $lifetime = self::FAILURE_CACHE_LIFETIME;
         }
@@ -82,11 +87,14 @@ class DomainResolver
 
         $domains = [];
         foreach ($this->storeManager->getStores() as $store) {
-            if (!$store->isActive()) {
+            if (!(bool)$store->getIsActive()) {
                 continue;
             }
-            $url = (string)$store->getBaseUrl(UrlInterface::URL_TYPE_LINK, true);
-            $host = strtolower((string)parse_url($url, PHP_URL_HOST));
+            $url = $this->parseUrl((string)$store->getBaseUrl(UrlInterface::URL_TYPE_LINK, true));
+            if ($url === null) {
+                continue;
+            }
+            $host = strtolower((string)$url->getHost());
             $websiteId = (int)$store->getWebsiteId();
             $domain = $this->domainFor($websiteId, $host);
             if ($domain === '') {
@@ -96,11 +104,20 @@ class DomainResolver
                 'store' => (string)$store->getName(),
                 'website' => (string)$this->storeManager->getWebsite($websiteId)->getName(),
                 'host' => $host,
-                'path' => rtrim((string)parse_url($url, PHP_URL_PATH), '/') ?: '/',
+                'path' => rtrim((string)$url->getPath(), '/') ?: '/',
             ];
         }
 
         return $this->domains = $domains;
+    }
+
+    private function parseUrl(string $url): ?Http
+    {
+        try {
+            return new Http($url);
+        } catch (UriException) {
+            return null;
+        }
     }
 
     /**

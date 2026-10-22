@@ -33,6 +33,9 @@ class GetMetrics extends AbstractAction
             . 'per period, optionally broken down by one dimension and filtered by device';
     }
 
+    /**
+     * @return array<string, array<string, mixed>>
+     */
     public function getParameterSchema(): array
     {
         return $this->domainParam() + $this->metricsParam() + $this->periodsParam() + $this->dimensionParam()

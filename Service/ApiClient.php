@@ -18,6 +18,7 @@ class ApiClient
 {
     private const BASE_URL = 'https://insights.rumvision.com/api/v1';
 
+    /** @var HttpClientInterface Symfony's default client unless one is passed in */
     private readonly HttpClientInterface $httpClient;
 
     public function __construct(

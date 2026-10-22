@@ -6,7 +6,7 @@
                 <resource id="Magento_Backend::stores">
                     <resource id="Magento_Backend::stores_settings">
                         <resource id="Magento_Config::config">
-                            <resource id="MagoAssistant_Rumvision::config" title="Mago Assistant RUMvision" sortOrder="30"/>
+                            <resource id="MagoAssistant_Rumvision::config" title="Mago Assistant RUMvision" translate="title" sortOrder="30"/>
                         </resource>
                     </resource>
                 </resource>

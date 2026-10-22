@@ -38,7 +38,7 @@ class Rumvision extends AbstractSkill
     /**
      * Reads only RUMvision's API, no Magento data; '' would be refused for everyone.
      *
-     * @param array $input
+     * @param array<string, mixed> $input
      * @return string
      */
     public function getMagentoAcl(array $input = []): string

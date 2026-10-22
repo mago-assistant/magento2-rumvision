@@ -22,6 +22,9 @@ class GetUxTimeline extends AbstractAction
         return 'UX and FUX scores over time within a period, split into intervals, to see when the experience changed';
     }
 
+    /**
+     * @return array<string, array<string, mixed>>
+     */
     public function getParameterSchema(): array
     {
         return $this->domainParam() + $this->periodsParam() + [

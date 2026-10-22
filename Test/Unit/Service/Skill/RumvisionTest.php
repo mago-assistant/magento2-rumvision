@@ -17,7 +17,7 @@ use MagoAssistant\Rumvision\Service\Skill\Rumvision;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
-final class RumvisionTest extends TestCase
+class RumvisionTest extends TestCase
 {
     #[Test]
     public function sharedParametersHaveOneShapeInEveryAction(): void
@@ -48,7 +48,16 @@ final class RumvisionTest extends TestCase
         self::assertSame('rumvision', $skill->getName());
         self::assertTrue($skill->isReadOnly());
         self::assertSame(
-            ['list_domains', 'describe_domain', 'get_metrics', 'get_ux_scores', 'get_ux_timeline', 'get_health_checks', 'get_alerts', 'list_annotations'],
+            [
+                'list_domains',
+                'describe_domain',
+                'get_metrics',
+                'get_ux_scores',
+                'get_ux_timeline',
+                'get_health_checks',
+                'get_alerts',
+                'list_annotations',
+            ],
             $skill->getParameterSchema()['properties']['action']['enum']
         );
         self::assertStringContainsString(
@@ -68,7 +77,12 @@ final class RumvisionTest extends TestCase
 
         return [
             'list_domains' => new Action\ListDomains($api, $config, $resolver),
-            'describe_domain' => new Action\DescribeDomain($api, $config, $resolver, $this->createStub(DomainCatalog::class)),
+            'describe_domain' => new Action\DescribeDomain(
+                $api,
+                $config,
+                $resolver,
+                $this->createStub(DomainCatalog::class)
+            ),
             'get_metrics' => new Action\GetMetrics($api, $config, $resolver, new MetricsFormatter()),
             'get_ux_scores' => new Action\GetUxScores($api, $config, $resolver),
             'get_ux_timeline' => new Action\GetUxTimeline($api, $config, $resolver),
