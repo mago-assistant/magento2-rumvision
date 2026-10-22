@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<ruleset name="MagoAssistant_Rumvision">
+    <description>Magento coding standard for this module</description>
+    <file>.</file>
+    <exclude-pattern>vendor/*</exclude-pattern>
+    <arg name="extensions" value="php,phtml,xml"/>
+    <arg value="sp"/>
+
+    <!-- Signatures are fully typed and PHPStan runs at level 8, so docblocks that only repeat the
+         types are not required; the same choice as Mago's own phpcs.xml. Docblocks with array
+         shapes or an explanation are still written where they add something. -->
+    <rule ref="Magento2">
+        <exclude name="Magento2.Annotation.MethodAnnotationStructure"/>
+        <exclude name="Magento2.Annotation.MethodArguments"/>
+    </rule>
+</ruleset>

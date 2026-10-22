@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<config xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="urn:magento:module:Magento_Config:etc/system_file.xsd">
+    <system>
+        <section id="mago_rumvision" translate="label" type="text" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="0">
+            <label>RUMvision</label>
+            <tab>mago_assistant</tab>
+            <resource>MagoAssistant_Rumvision::config</resource>
+            <group id="general" translate="label comment" type="text" sortOrder="10" showInDefault="1" showInWebsite="1" showInStore="0">
+                <label>RUMvision</label>
+                <comment><![CDATA[Real-user performance data (Core Web Vitals, health checks, alerts) from <a href="https://www.rumvision.com/help-center/apis/client/introduction/" target="_blank" rel="noopener">RUMvision</a> for the assistant, as the skill <code>rumvision</code>. Uses one API key for this project, so every admin with the skill grant can use it.]]></comment>
+                <field id="enabled" translate="label" type="select" sortOrder="10" showInDefault="1" showInWebsite="0" showInStore="0" canRestore="1">
+                    <label>Enabled</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                </field>
+                <field id="api_key" translate="label comment" type="obscure" sortOrder="20" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>API Key</label>
+                    <backend_model>Magento\Config\Model\Config\Backend\Encrypted</backend_model>
+                    <comment><![CDATA[Create it in RUMvision under <em>API keys</em> with the role <strong>All</strong> (data, health checks and alerts), limited to this project's domain and preferably to this server's IP address.]]></comment>
+                    <depends>
+                        <field id="enabled">1</field>
+                    </depends>
+                </field>
+                <field id="domain" translate="label comment" type="select" sortOrder="30" showInDefault="1" showInWebsite="1" showInStore="0">
+                    <label>RUMvision Domain</label>
+                    <source_model>MagoAssistant\Rumvision\Model\Config\Source\Domains</source_model>
+                    <comment><![CDATA[RUMvision measures per tracking snippet, not per URL: one RUMvision domain usually covers all store views and languages that load its snippet, also on other hostnames. Only choose a domain per website when that website has its own snippet in RUMvision. The list shows the domains the saved API key can read.]]></comment>
+                    <depends>
+                        <field id="enabled">1</field>
+                    </depends>
+                </field>
+                <field id="timeout" translate="label" type="text" sortOrder="40" showInDefault="1" showInWebsite="0" showInStore="0" canRestore="1">
+                    <label>Timeout (seconds)</label>
+                    <validate>validate-digits validate-greater-than-zero</validate>
+                    <depends>
+                        <field id="enabled">1</field>
+                    </depends>
+                </field>
+            </group>
+        </section>
+    </system>
+</config>

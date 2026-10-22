@@ -1,0 +1,23 @@
+{
+  "checked_at": "2026-10-22",
+  "skill_version": 1,
+  "areas": {
+    "identity": "fail",
+    "license": "pass",
+    "integrity": "pass",
+    "admin_ux": "partial",
+    "ci": "pass",
+    "static_analysis": "pass",
+    "tests": "pass",
+    "security": "pass",
+    "documentation": "partial",
+    "hygiene": "pass"
+  },
+  "notes": [
+    "Identity kept as mago-assistant/magento2-rumvision and MagoAssistant_Rumvision by choice, matching Mago and its add-ons",
+    "Config section lives under Mago's mago_assistant tab, which follows from the identity choice",
+    "PHPCS excludes the Magento2.Annotation docblock sniffs (typed signatures, same as Mago)",
+    "Integration tests not yet run: they need check-extension CI or a store with the module installed",
+    "README screenshots are placeholders"
+  ]
+}
