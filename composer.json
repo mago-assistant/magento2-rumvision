@@ -15,7 +15,7 @@
     },
     "require-dev": {
         "bitexpert/phpstan-magento": "^0.44",
-        "magento/magento-coding-standard": "^41",
+        "magento/magento-coding-standard": "^42",
         "phpstan/extension-installer": "^1.4",
         "phpstan/phpstan": "^2.3",
         "phpunit/phpunit": "^10.5 || ^11.5 || ^12.5"
